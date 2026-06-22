@@ -1176,9 +1176,18 @@ function App() {
         await api(`usuarios?id=eq.${perfil.id}`, token, {
           method: "PATCH", body: JSON.stringify({ turma_id: turmaId })
         });
+        await carregarConvites();
+        await carregarAlunos();
+        showStatus("✓ Convite aceito! Saindo e entrando novamente para atualizar...");
+        // Aguarda 2s para o professor ler a mensagem, depois faz logout automático
+        setTimeout(async () => {
+          await sbAuth.signOut(token);
+          setAuthData(null);
+        }, 2500);
+      } else {
+        await carregarConvites();
+        showStatus("Convite recusado");
       }
-      await carregarConvites();
-      showStatus(aceitar ? "✓ Convite aceito!" : "Convite recusado");
     } catch(e) { showStatus("Erro ao responder convite", "erro"); }
   };
 
