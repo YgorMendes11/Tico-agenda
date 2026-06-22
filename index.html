@@ -1017,7 +1017,14 @@ function App() {
       await api(`usuarios?id=eq.${perfil.id}`, token, {
         method: "PATCH", body: JSON.stringify({ escola_atual_id: escolaId })
       });
-      await Promise.all([carregarTurmas(), carregarSolicitacoes(), carregarAlunos()]);
+      // Carrega turmas diretamente com o novo escolaId, sem depender do state
+      const [turmasData, todasData] = await Promise.all([
+        api(`turmas?escola_id=eq.${escolaId}&select=*&order=nome`, token),
+        api("turmas?select=*,escola:escola_id(nome)&order=nome", token),
+      ]);
+      setTurmas(turmasData);
+      setTodasTurmas(todasData);
+      await Promise.all([carregarSolicitacoes(), carregarAlunos()]);
       showStatus("✓ Escola alterada");
     } catch(e) { console.error(e); }
   };
