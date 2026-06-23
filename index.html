@@ -1345,6 +1345,20 @@ function App() {
   const sair = async () => {
     await sbAuth.signOut(token);
     setAuthData(null);
+    setAlunos([]);
+    setAlunoSel(null);
+    setRelatorios([]);
+    setTurmas([]);
+    setTodasTurmas([]);
+    setEscolas([]);
+    setEscolaAtualId(null);
+    setProfessores([]);
+    setConvites([]);
+    setSolicitacoes([]);
+    setMensagens([]);
+    setNaoLidas(0);
+    setNaoLidasAdmin(0);
+    setAba("relatorio");
   };
 
   const nomeAluno = alunoSel ? (alunos.find(a => a.id === alunoSel) || {}).nome || "" : "";
