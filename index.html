@@ -1228,7 +1228,10 @@ function App() {
       setSolEmailCoord(""); setSolAlunoId("");
       await carregarSolicitacoes();
       showStatus("✓ Solicitação enviada");
-    } catch(e) { showStatus("Erro ao enviar solicitação", "erro"); }
+    } catch(e) {
+      const msg = e.message || "Erro desconhecido";
+      showStatus("Erro: " + msg.substring(0, 80), "erro");
+    }
   };
 
   // ── Coordenação aprova/rejeita solicitação ────────────────
