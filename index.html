@@ -1106,7 +1106,7 @@ function App() {
     try {
       // Coordenação vê solicitações de TODAS as escolas que coordena (RLS já garante isso no banco)
       const data = await api("solicitacoes?select=*,turma:turma_id(nome),escola:escola_id(nome),responsavel:responsavel_id(nome,email)&order=created_at.desc", token);
-      setSolicitacoes(data);
+      console.log("solicitacoes:", JSON.stringify(data)); setSolicitacoes(data);
       if (isCoordenacao) setNaoLidasAdmin(data.filter(s => s.status === "pendente").length);
     } catch(e) { console.error(e); }
   }, [token, isCoordenacao]);
