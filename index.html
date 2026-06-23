@@ -1133,7 +1133,7 @@ function App() {
       await carregarTurmas();
       await carregarTodasTurmas();
       showStatus("✓ Turma criada");
-    } catch(e) { setErroTurma("Erro ao criar turma."); }
+    } catch(e) { setErroTurma("Erro: " + (e.message || "").substring(0, 100)); }
   };
 
   // ── Remover turma ────────────────────────────────────────
