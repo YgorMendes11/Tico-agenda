@@ -1085,7 +1085,7 @@ function App() {
   const carregarProfessores = React.useCallback(async () => {
     if (!token) return;
     try {
-      const data = await api("usuarios?tipo=eq.professor&order=nome", token);
+      const data = await api("usuarios?tipo=eq.professor&order=nome&select=*,professores_turmas(turma_id)", token);
       setProfessores(data);
     } catch(e) { console.error(e); }
   }, [token]);
@@ -1173,13 +1173,15 @@ function App() {
         method: "PATCH", body: JSON.stringify({ status: aceitar ? "aceito" : "recusado" })
       });
       if (aceitar) {
-        await api(`usuarios?id=eq.${perfil.id}`, token, {
-          method: "PATCH", body: JSON.stringify({ turma_id: turmaId })
+        // Insere na tabela de junção em vez de sobrescrever turma_id
+        await api("professores_turmas", token, {
+          method: "POST",
+          prefer: "",
+          body: JSON.stringify({ professor_id: perfil.id, turma_id: turmaId })
         });
         await carregarConvites();
         await carregarAlunos();
         showStatus("✓ Convite aceito! Saindo e entrando novamente para atualizar...");
-        // Aguarda 2s para o professor ler a mensagem, depois faz logout automático
         setTimeout(async () => {
           await sbAuth.signOut(token);
           setAuthData(null);
@@ -1251,11 +1253,11 @@ function App() {
     } catch(e) { showStatus("Erro", "erro"); }
   };
 
-  // ── Remover professor da turma ────────────────────────────
-  const removerProfessorDaTurma = async (professorId) => {
+  // ── Remover professor de uma turma específica ─────────────
+  const removerProfessorDaTurma = async (professorId, turmaId) => {
     try {
-      await api(`usuarios?id=eq.${professorId}`, token, {
-        method: "PATCH", body: JSON.stringify({ turma_id: null })
+      await api(`professores_turmas?professor_id=eq.${professorId}&turma_id=eq.${turmaId}`, token, {
+        method: "DELETE", prefer: ""
       });
       await carregarProfessores();
       showStatus("✓ Professor removido da turma");
@@ -1606,7 +1608,9 @@ function App() {
                 ) : turmas.map(t => {
                   const aberta = turmaSel === t.id;
                   const alunosDaTurma = alunos.filter(a => a.turma_id === t.id);
-                  const profDaTurma = professores.find(p => p.turma_id === t.id);
+                  const profsDaTurma = professores.filter(p =>
+                    p.professores_turmas && p.professores_turmas.some(pt => pt.turma_id === t.id)
+                  );
                   const convitesDaTurma = convites.filter(c => c.turma_id === t.id && c.status === "pendente");
 
                   return (
@@ -1625,8 +1629,8 @@ function App() {
                           {t.descricao && <div style={{ fontSize:12, color:"#9A9590", marginTop:2 }}>{t.descricao}</div>}
                           <div style={{ fontSize:12, fontWeight:600, marginTop:4, display:"flex", gap:12 }}>
                             <span style={{ color:"#4CAF8A" }}>👥 {alunosDaTurma.length} alunos</span>
-                            <span style={{ color: profDaTurma ? "#4CAF8A" : "#D4A843" }}>
-                              👩‍🏫 {profDaTurma ? profDaTurma.nome : "Sem professor"}
+                            <span style={{ color: profsDaTurma.length > 0 ? "#4CAF8A" : "#D4A843" }}>
+                              👩‍🏫 {profsDaTurma.length > 0 ? `${profsDaTurma.length} professor${profsDaTurma.length > 1 ? "es" : ""}` : "Sem professor"}
                             </span>
                           </div>
                         </div>
@@ -1640,55 +1644,55 @@ function App() {
                       {aberta && (
                         <div style={{ padding:"0 20px 20px", borderTop:"1px solid #F0EDE8" }}>
 
-                          {/* Seção professor */}
+                          {/* Seção professores */}
                           <div style={{ marginTop:16, marginBottom:16 }}>
                             <div style={{ fontSize:12, fontWeight:700, color:"#6A6560",
                               textTransform:"uppercase", letterSpacing:0.8, marginBottom:10 }}>
-                              👩‍🏫 Professor
+                              👩‍🏫 Professores ({profsDaTurma.length})
                             </div>
-                            {profDaTurma ? (
-                              <div style={{ display:"flex", alignItems:"center", gap:10,
-                                background:"#F0FFF8", borderRadius:12, padding:"10px 14px" }}>
+                            {profsDaTurma.map(p => (
+                              <div key={p.id} style={{ display:"flex", alignItems:"center", gap:10,
+                                background:"#F0FFF8", borderRadius:12, padding:"10px 14px", marginBottom:8 }}>
                                 <div style={{ width:32, height:32, borderRadius:"50%", background:"#4CAF8A",
                                   display:"flex", alignItems:"center", justifyContent:"center",
                                   color:"white", fontWeight:700, flexShrink:0 }}>
-                                  {profDaTurma.nome[0]}
+                                  {p.nome[0]}
                                 </div>
                                 <div style={{ flex:1 }}>
-                                  <div style={{ fontWeight:700, fontSize:14 }}>{profDaTurma.nome}</div>
-                                  <div style={{ fontSize:12, color:"#9A9590" }}>{profDaTurma.email}</div>
+                                  <div style={{ fontWeight:700, fontSize:14 }}>{p.nome}</div>
+                                  <div style={{ fontSize:12, color:"#9A9590" }}>{p.email}</div>
                                 </div>
-                                <button onClick={() => removerProfessorDaTurma(profDaTurma.id)}
+                                <button onClick={() => removerProfessorDaTurma(p.id, t.id)}
                                   style={{ background:"#FEE2E2", border:"none", borderRadius:8,
                                     color:"#E76F86", padding:"6px 10px", cursor:"pointer",
                                     fontWeight:700, fontSize:12 }}>
                                   Remover
                                 </button>
                               </div>
-                            ) : (
-                              <div>
-                                {convitesDaTurma.length > 0 && (
-                                  <div style={{ fontSize:13, color:"#F4A261", fontWeight:600, marginBottom:8 }}>
-                                    ⏳ Convite pendente para: {convitesDaTurma.map(c => c.email).join(", ")}
-                                  </div>
-                                )}
-                                <div style={{ display:"flex", gap:8 }}>
-                                  <input
-                                    value={emailConvite[t.id] || ""}
-                                    onChange={e => setEmailConvite(prev => ({ ...prev, [t.id]: e.target.value }))}
-                                    placeholder="Email do professor..."
-                                    style={{ flex:1, border:"2px solid #E8E5E0", borderRadius:12,
-                                      padding:"10px 14px", fontSize:13, background:"#FAFAF8" }}
-                                  />
-                                  <button onClick={() => enviarConvite(t.id)}
-                                    style={{ background:"linear-gradient(135deg,#4CAF8A,#3A9B7A)",
-                                      border:"none", borderRadius:12, color:"white",
-                                      padding:"0 16px", cursor:"pointer", fontWeight:700, fontSize:13 }}>
-                                    Convidar
-                                  </button>
+                            ))}
+                            {/* Campo para convidar novo professor */}
+                            <div style={{ marginTop: profsDaTurma.length > 0 ? 10 : 0 }}>
+                              {convitesDaTurma.length > 0 && (
+                                <div style={{ fontSize:13, color:"#F4A261", fontWeight:600, marginBottom:8 }}>
+                                  ⏳ Convite pendente para: {convitesDaTurma.map(c => c.email).join(", ")}
                                 </div>
+                              )}
+                              <div style={{ display:"flex", gap:8 }}>
+                                <input
+                                  value={emailConvite[t.id] || ""}
+                                  onChange={e => setEmailConvite(prev => ({ ...prev, [t.id]: e.target.value }))}
+                                  placeholder="Email do professor para convidar..."
+                                  style={{ flex:1, border:"2px solid #E8E5E0", borderRadius:12,
+                                    padding:"10px 14px", fontSize:13, background:"#FAFAF8" }}
+                                />
+                                <button onClick={() => enviarConvite(t.id)}
+                                  style={{ background:"linear-gradient(135deg,#4CAF8A,#3A9B7A)",
+                                    border:"none", borderRadius:12, color:"white",
+                                    padding:"0 16px", cursor:"pointer", fontWeight:700, fontSize:13 }}>
+                                  Convidar
+                                </button>
                               </div>
-                            )}
+                            </div>
                           </div>
 
                           {/* Seção alunos */}
