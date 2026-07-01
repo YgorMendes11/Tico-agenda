@@ -9,27 +9,46 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <script>
+    window.addEventListener('load', function() {
+      fetch('app.js?' + Date.now())
+        .then(function(r) { return r.text(); })
+        .then(function(code) {
+          try {
+            var result = Babel.transform(code, {
+              presets: ['react'],
+              plugins: []
+            });
+            var script = document.createElement('script');
+            script.textContent = result.code;
+            document.body.appendChild(script);
+          } catch(e) {
+            showError('Erro Babel: ' + e.message);
+          }
+        })
+        .catch(function(e) {
+          showError('Erro ao carregar app.js: ' + e.message);
+        });
+    });
+
+    function showError(msg) {
+      document.getElementById('root').innerHTML =
+        '<div style="padding:40px;text-align:center;font-family:sans-serif">' +
+        '<div style="font-size:40px;margin-bottom:12px">⚠️</div>' +
+        '<div style="font-size:18px;font-weight:700;color:#E76F86">Erro</div>' +
+        '<div style="font-size:13px;margin-top:8px;color:#64748B;word-break:break-all">' + msg + '</div>' +
+        '</div>';
+    }
+  </script>
 </head>
 <body>
-<div id="root"></div>
-<script>
-  // Carrega o app.js e executa via Babel
-  fetch('app.js')
-    .then(r => r.text())
-    .then(code => {
-      const transformed = Babel.transform(code, { presets: ['react'] }).code;
-      const script = document.createElement('script');
-      script.textContent = transformed;
-      document.body.appendChild(script);
-    })
-    .catch(e => {
-      document.getElementById('root').innerHTML =
-        '<div style="padding:40px;text-align:center;color:#E76F86;font-family:sans-serif">' +
-        '<div style="font-size:40px;margin-bottom:12px">⚠️</div>' +
-        '<div style="font-size:18px;font-weight:700">Erro ao carregar o app</div>' +
-        '<div style="font-size:14px;margin-top:8px;color:#64748B">' + e.message + '</div>' +
-        '</div>';
-    });
-</script>
+<div id="root">
+  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:sans-serif;color:#94A3B8">
+    <div style="text-align:center">
+      <div style="font-size:40px;margin-bottom:12px">📚</div>
+      <div style="font-size:16px;font-weight:700">Carregando...</div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
