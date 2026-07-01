@@ -12,6 +12,24 @@
 </head>
 <body>
 <div id="root"></div>
-<script type="text/babel" src="app.js"></script>
+<script>
+  // Carrega o app.js e executa via Babel
+  fetch('app.js')
+    .then(r => r.text())
+    .then(code => {
+      const transformed = Babel.transform(code, { presets: ['react'] }).code;
+      const script = document.createElement('script');
+      script.textContent = transformed;
+      document.body.appendChild(script);
+    })
+    .catch(e => {
+      document.getElementById('root').innerHTML =
+        '<div style="padding:40px;text-align:center;color:#E76F86;font-family:sans-serif">' +
+        '<div style="font-size:40px;margin-bottom:12px">⚠️</div>' +
+        '<div style="font-size:18px;font-weight:700">Erro ao carregar o app</div>' +
+        '<div style="font-size:14px;margin-top:8px;color:#64748B">' + e.message + '</div>' +
+        '</div>';
+    });
+</script>
 </body>
 </html>
